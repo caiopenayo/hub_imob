@@ -116,9 +116,9 @@ class SyncEngine:
     ) -> list[PropertyCandidate]:
         candidates: list[PropertyCandidate] = []
         page = 1
-        max_pages = max_pages or self.settings.max_pages or 1
+        max_pages = self.settings.max_pages if max_pages is None else max_pages
 
-        while page and page <= max_pages:
+        while page and (max_pages <= 0 or page <= max_pages):
             try:
                 html = await self.provider.fetch_listing_page(client, page, search_scope)
                 stats.pages_fetched += 1
@@ -186,4 +186,3 @@ class SyncEngine:
         if self.http_client is not None:
             return self.http_client
         return SharedScraperHTTPClient(self.settings, provider_headers=self.provider.headers)
-

@@ -68,3 +68,28 @@ def test_http_client_does_not_retry_404():
     else:
         raise AssertionError("expected ScraperHTTPError")
     assert calls == 1
+
+
+def test_http_client_wraps_final_5xx_as_scraper_error(monkeypatch):
+    async def no_sleep(_seconds):
+        return None
+
+    def handler(request):
+        return httpx.Response(503, request=request)
+
+    monkeypatch.setattr("scrapers.core.http.asyncio.sleep", no_sleep)
+
+    async def run():
+        async_client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+        try:
+            async with SharedScraperHTTPClient(_settings(max_retries=1), client=async_client) as client:
+                await client.fetch_text(ScrapeRequest(url="https://example.test/down"))
+        finally:
+            await async_client.aclose()
+
+    try:
+        asyncio.run(run())
+    except ScraperHTTPError as exc:
+        assert exc.status_code == 503
+    else:
+        raise AssertionError("expected ScraperHTTPError")

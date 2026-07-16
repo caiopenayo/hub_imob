@@ -9,9 +9,6 @@ import json
 import httpx
 from dotenv import load_dotenv
 
-from scrapers.core.engine import SyncEngine
-from scrapers.core.settings import load_scraper_settings
-
 ROOT_DIR = Path(__file__).resolve().parents[1]
 load_dotenv(ROOT_DIR / ".env")
 
@@ -59,6 +56,9 @@ async def run_provider_sync(
     search_scope: dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
     """Run a source that implements the shared provider interface."""
+    from scrapers.core.engine import SyncEngine
+    from scrapers.core.settings import load_scraper_settings
+
     provider = load_provider(source)
     if provider is None:
         raise RuntimeError(f"Source '{source}' does not expose a provider")

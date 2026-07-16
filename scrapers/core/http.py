@@ -94,14 +94,29 @@ class SharedScraperHTTPClient:
                         continue
                 response.raise_for_status()
                 return response
-            except (httpx.TimeoutException, httpx.NetworkError, httpx.HTTPStatusError, ScraperHTTPError) as exc:
+            except ScraperHTTPError as exc:
                 last_exc = exc
-                status_code = getattr(exc, "status_code", None)
-                if isinstance(exc, httpx.HTTPStatusError):
-                    status_code = exc.response.status_code
+                status_code = exc.status_code
                 if status_code in {403, 404} or attempt >= attempts - 1:
                     logger.warning("scraper request failed url=%s status=%s", request.url, status_code)
                     raise
+                await self._backoff(attempt)
+            except httpx.HTTPStatusError as exc:
+                last_exc = exc
+                status_code = exc.response.status_code
+                if attempt >= attempts - 1:
+                    logger.warning("scraper request failed url=%s status=%s", request.url, status_code)
+                    raise ScraperHTTPError(
+                        f"HTTP {status_code}",
+                        status_code=status_code,
+                        url=str(exc.response.url),
+                    ) from exc
+                await self._backoff(attempt)
+            except (httpx.TimeoutException, httpx.NetworkError) as exc:
+                last_exc = exc
+                if attempt >= attempts - 1:
+                    logger.warning("scraper request failed url=%s status=%s", request.url, None)
+                    raise ScraperHTTPError(f"network error: {exc}", url=request.url) from exc
                 await self._backoff(attempt)
 
         raise ScraperHTTPError(f"request failed after {attempts} attempts: {last_exc}", url=request.url)
