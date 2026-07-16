@@ -1,0 +1,34 @@
+# Render manifest (example) — configure service IDs and secrets in Render dashboard
+services:
+  - type: web
+    name: imob-backend
+    env: python
+    plan: free
+    repo: .
+    branch: main
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        from: env
+      - key: SECRET_KEY
+        from: env
+
+  - type: cron
+    name: imob-scrapers
+    env: python
+    plan: free
+    repo: .
+    branch: main
+    # run every 30 minutes by default; override on Render dashboard if desired
+    schedule: "*/30 * * * *"
+    buildCommand: pip install -r scrapers/requirements.txt
+    startCommand: python -m scrapers.run_scraper --ingest
+    envVars:
+      - key: BACKEND_URL
+        from: env
+      - key: BACKEND_API_KEY
+        from: env
+
+# Note: fill in env vars and secrets via the Render dashboard. This manifest is a template
+# Render will use it if you connect the repository and enable "Auto-Deploy".

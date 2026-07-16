@@ -1,0 +1,104 @@
+# Permite usar tipos opcionais, ou seja, valores que podem ser str/int/float ou None
+from typing import Optional
+
+# APIRouter cria um grupo de rotas
+# Depends injeta dependências, como a sessão do banco
+# HTTPException permite retornar erros HTTP
+# Query permite validar parâmetros da URL
+from fastapi import APIRouter, Depends, HTTPException, Query
+
+# Tipo da sessão assíncrona do banco de dados
+from sqlalchemy.ext.asyncio import AsyncSession
+
+# Função que cria/fornece uma sessão com o banco
+from ...db.session import get_session
+
+# Schemas Pydantic usados para validar entrada e formatar saída
+from ...schemas.property import PropertyCreate, PropertyRead, PropertyList
+
+# Funções CRUD que acessam o banco
+from ...db.crud import create_or_update_property, get_property_by_id, list_properties as list_properties_crud
+
+from ...core.security import require_api_key
+
+
+# Cria um grupo de rotas com prefixo /properties
+# Todas as rotas deste arquivo começam com /properties
+router = APIRouter(prefix="/properties", tags=["properties"])
+
+# Rota GET /properties/
+# Lista imóveis com paginação e filtros opcionais
+@router.get("/", response_model=PropertyList)
+async def list_properties(
+    # Página atual; mínimo 1
+    page: int = Query(1, ge=1),
+
+    # Quantidade de itens por página; mínimo 1 e máximo 100
+    per_page: int = Query(20, ge=1, le=100),
+
+    # Filtro opcional por cidade
+    city: Optional[str] = None,
+
+    # Filtro opcional por preço mínimo
+    min_price: Optional[float] = None,
+
+    # Filtro opcional por preço máximo
+    max_price: Optional[float] = None,
+
+    # Filtro opcional por número de quartos
+    bedrooms: Optional[int] = None,
+
+    # Ordenação opcional da listagem
+    sort: Optional[str] = None,
+
+    # Recebe uma sessão do banco automaticamente via Depends
+    session: AsyncSession = Depends(get_session),
+):
+    # Busca imóveis no banco usando os filtros e a paginação
+    items, total = await list_properties_crud(
+        session=session,
+        city=city,
+        min_price=min_price,
+        max_price=max_price,
+        bedrooms=bedrooms,
+        sort=sort,
+
+         # Número máximo de imóveis retornados
+        limit=per_page,
+
+        # Quantidade de imóveis que devem ser pulados
+        # Exemplo: página 2 com 20 por página pula os primeiros 20
+        offset=(page - 1) * per_page,
+    )
+    # Retorna os imóveis e metadados da paginação
+    return {"items": [PropertyRead.model_validate(i) for i in items], "meta": {"page": page, "per_page": per_page, "total": total}}
+
+# Rota GET /properties/{property_id}
+# Busca um imóvel específico pelo ID
+@router.get("/{property_id}", response_model=PropertyRead)
+async def get_property(property_id: str, session: AsyncSession = Depends(get_session)):
+    # Busca o imóvel no banco pelo ID
+    property_obj = await get_property_by_id(session, property_id)
+
+    # Se não encontrar, retorna erro 404
+    if not property_obj:
+        raise HTTPException(status_code=404, detail="Property not found")
+    # Retorna o imóvel encontrado
+    return property_obj
+
+
+# Rota POST /properties/
+# Cria ou atualiza um imóvel no banco
+@router.post("/", response_model=PropertyRead)
+async def ingest_property(
+    payload: PropertyCreate,
+    _: None = Depends(require_api_key),
+    session: AsyncSession = Depends(get_session),
+):
+    try:
+        # Cria um novo imóvel ou atualiza um existente
+        created = await create_or_update_property(session, payload)
+        # Retorna o imóvel criado/atualizado
+        return created
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
