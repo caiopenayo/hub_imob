@@ -69,6 +69,18 @@ PACHECO_NEIGHBORHOOD_IDS = {
     "vila-madalena": "119",
 }
 
+IMAGE_URL_ATTRIBUTES = (
+    "href",
+    "data-href",
+    "data-src",
+    "data-lazy",
+    "data-original",
+    "data-full",
+    "data-large",
+    "data-image",
+    "src",
+)
+
 
 class UnexpectedListingStructure(ValueError):
     pass
@@ -478,10 +490,10 @@ class PachecoProvider(RealEstateProvider):
         return normalize_space(element.get_text(" ", strip=True)) if element else None
 
     def _card_images(self, card: Tag) -> list[str]:
-        values: list[str | None] = []
-        for element in card.select(".box-img a[href], .box-img img[src]"):
-            values.append(self._valid_image_url(element.get("href") or element.get("src")))
-        return dedupe_urls(values, self.base_url)
+        box = card.select_one(".box-img")
+        if not box:
+            return []
+        return dedupe_urls(self._image_urls_from_container(box), self.base_url)
 
     def _card_flags(self, card: Tag) -> dict[str, Any]:
         visible = [normalize_space(text) for text in card.stripped_strings]
@@ -690,17 +702,41 @@ class PachecoProvider(RealEstateProvider):
         return result
 
     def _detail_images(self, root: Tag) -> list[str]:
-        urls: list[str | None] = []
         gallery = root.select_one(":scope > .hero-carousel .owl-single-imovel") or root.select_one(
             ".hero-carousel .owl-single-imovel"
         )
         if not gallery:
             return []
-        for link in gallery.select("a[href]"):
-            urls.append(self._valid_image_url(link.get("href")))
-        for image in gallery.select("img[src]"):
-            urls.append(self._valid_image_url(image.get("src")))
-        return dedupe_urls(urls, self.base_url)
+        return dedupe_urls(self._image_urls_from_container(gallery), self.base_url)
+
+    def _image_urls_from_container(self, container: Tag) -> list[str | None]:
+        urls: list[str | None] = []
+        for element in container.find_all(True):
+            for attr in IMAGE_URL_ATTRIBUTES:
+                urls.append(self._valid_image_url(element.get(attr)))
+            urls.append(self._valid_image_url(self._largest_srcset_url(element.get("srcset"))))
+        return urls
+
+    def _largest_srcset_url(self, value: str | None) -> str | None:
+        if not value:
+            return None
+        best_url = None
+        best_score = Decimal("-1")
+        for entry in value.split(","):
+            parts = normalize_space(entry).split()
+            if not parts:
+                continue
+            url = parts[0]
+            score = Decimal("0")
+            if len(parts) > 1:
+                descriptor = parts[1].lower()
+                parsed = parse_decimal_number(descriptor)
+                if parsed is not None:
+                    score = parsed
+            if best_url is None or score >= best_score:
+                best_url = url
+                best_score = score
+        return best_url
 
     def _json_ld_images(self, soup: BeautifulSoup) -> list[str]:
         images: list[str | None] = []

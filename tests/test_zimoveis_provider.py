@@ -158,6 +158,23 @@ def test_detail_parser_handles_missing_condominium_and_iptu_with_og_image():
     assert detail.main_image_url == "https://www.zimoveis.com.br/fotos/300001-og.jpg?ts=4"
 
 
+def test_detail_gallery_prefers_full_images_over_generated_thumb():
+    candidate = candidate_by_id(provider.parse_listing_page(read_fixture("zimoveis_listing_page1.html"), 1).candidates, "170805")
+    html = read_fixture("zimoveis_detail_full.html").replace(
+        '<a data-fancybox="galeria" href="/fotos/170805-1.jpg?ts=1">',
+        """
+      <a data-fancybox="galeria" href="/thumb/170805/apartamento-venda-perdizes_170805_1_1920x1080.webp?ts=1">Thumb</a>
+      <a data-fancybox="galeria" href="/fotos/170805-1.jpg?ts=1">
+        """,
+        1,
+    )
+
+    detail = provider.parse_property_detail(html, candidate)
+
+    assert detail.image_urls[0] == "https://www.zimoveis.com.br/fotos/170805-1.jpg?ts=1"
+    assert all("/thumb/" not in image for image in detail.image_urls)
+
+
 def test_distance_parser_accepts_metros_and_km_text():
     assert provider._distance("818 metros") == ("818 metros", 818)
     assert provider._distance("1,40 km") == ("1,40 km", 1400)

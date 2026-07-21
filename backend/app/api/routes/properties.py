@@ -1,5 +1,6 @@
 # Permite usar tipos opcionais, ou seja, valores que podem ser str/int/float ou None
 from typing import Optional
+from urllib.parse import urlsplit
 
 # APIRouter cria um grupo de rotas
 # Depends injeta dependências, como a sessão do banco
@@ -30,6 +31,54 @@ from ...core.security import require_api_key
 # Cria um grupo de rotas com prefixo /properties
 # Todas as rotas deste arquivo começam com /properties
 router = APIRouter(prefix="/properties", tags=["properties"])
+
+
+def is_generated_zimoveis_thumbnail(url: str | None) -> bool:
+    if not url:
+        return False
+    parts = urlsplit(url)
+    return parts.netloc.endswith("zimoveis.com.br") and parts.path.startswith("/thumb/")
+
+
+def display_image_urls(urls: list[str | None]) -> list[str]:
+    seen = set()
+    normalized = []
+    for url in urls:
+        if not url:
+            continue
+        key = url.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        normalized.append(url)
+
+    preferred = [url for url in normalized if not is_generated_zimoveis_thumbnail(url)]
+    return preferred or normalized
+
+
+def serialize_property(property_obj) -> PropertyRead:
+    property_read = PropertyRead.model_validate(property_obj)
+    metadata = dict(property_read.metadata or {})
+    photos = [
+        photo.source_url
+        for photo in getattr(property_obj, "photos", []) or []
+        if getattr(photo, "is_active", True) is not False and getattr(photo, "source_url", None)
+    ]
+    metadata_images = metadata.get("images") if isinstance(metadata.get("images"), list) else []
+    image_urls = display_image_urls(
+        photos
+        or [
+            property_read.main_image_url,
+            metadata.get("main_image") if isinstance(metadata.get("main_image"), str) else None,
+            *[url for url in metadata_images if isinstance(url, str)],
+        ]
+    )
+    if image_urls:
+        property_read.main_image_url = image_urls[0]
+        metadata["images"] = image_urls
+        metadata["main_image"] = image_urls[0]
+        property_read.metadata = metadata
+    return property_read
 
 # Rota GET /properties/
 # Lista imóveis com paginação e filtros opcionais
@@ -76,7 +125,7 @@ async def list_properties(
         offset=(page - 1) * per_page,
     )
     # Retorna os imóveis e metadados da paginação
-    return {"items": [PropertyRead.model_validate(i) for i in items], "meta": {"page": page, "per_page": per_page, "total": total}}
+    return {"items": [serialize_property(i) for i in items], "meta": {"page": page, "per_page": per_page, "total": total}}
 
 
 @router.get("/{property_id}/price-history", response_model=list[PriceHistoryItem])
@@ -102,7 +151,7 @@ async def get_property(property_id: str, session: AsyncSession = Depends(get_ses
     if not property_obj:
         raise HTTPException(status_code=404, detail="Property not found")
     # Retorna o imóvel encontrado
-    return property_obj
+    return serialize_property(property_obj)
 
 
 # Rota POST /properties/

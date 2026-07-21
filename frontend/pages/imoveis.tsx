@@ -19,7 +19,7 @@ import {
 } from '../lib/propertySearch'
 import type { Filters, Meta, Property } from '../lib/propertySearch'
 
-const PER_PAGE = 20
+const PER_PAGE = 21
 
 export default function PropertiesPage() {
   const router = useRouter()
@@ -279,7 +279,7 @@ export default function PropertiesPage() {
             {!error && hasResults ? (
               <section className="property-grid" aria-label="Lista de imóveis">
                 {sortedProperties.map((property, index) => (
-                  <PropertyCard key={property.id} property={property} priority={index < 2} />
+                  <PropertyCard key={property.id} property={property} priority={index < 3} />
                 ))}
               </section>
             ) : null}

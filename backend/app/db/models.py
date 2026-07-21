@@ -76,6 +76,13 @@ class Property(Base):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+    photos: Mapped[list["PropertyPhoto"]] = relationship(
+        "PropertyPhoto",
+        back_populates="property",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        order_by="PropertyPhoto.position",
+    )
 
 
 class PropertyOffer(Base):
@@ -124,6 +131,7 @@ class PropertyPhoto(Base):
     removed_at: Mapped[datetime | None] = mapped_column(DateTime)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, onupdate=utc_now)
+    property: Mapped["Property"] = relationship("Property", back_populates="photos")
 
 
 class PropertyEvent(Base):

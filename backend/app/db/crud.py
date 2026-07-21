@@ -23,7 +23,7 @@ async def get_property_by_source_external(session: AsyncSession, source_id, exte
     # Monta uma query SELECT na tabela Property com dois filtros    
     stmt = (
         select(Property)
-        .options(selectinload(Property.offers))
+        .options(selectinload(Property.offers), selectinload(Property.photos))
         .where(Property.source_id == source_id, Property.external_id == external_id)
     )
     # Executa a query no banco    
@@ -34,7 +34,7 @@ async def get_property_by_source_external(session: AsyncSession, source_id, exte
 
 # Busca um imóvel pelo ID interno do banco
 async def get_property_by_id(session: AsyncSession, property_id):
-    stmt = select(Property).options(selectinload(Property.offers)).where(Property.id == property_id)
+    stmt = select(Property).options(selectinload(Property.offers), selectinload(Property.photos)).where(Property.id == property_id)
     result = await session.execute(stmt)
     return result.scalars().first()
 
@@ -75,7 +75,7 @@ async def list_properties(
         Property.status == "ACTIVE",
         Property.property_subtype.is_distinct_from("Comercial"),
     ]
-    stmt = select(Property).options(selectinload(Property.offers)).where(*visible_filters)
+    stmt = select(Property).options(selectinload(Property.offers), selectinload(Property.photos)).where(*visible_filters)
 
     # Query separada para contar o total de imóveis com os mesmos filtros
     count_stmt = select(func.count()).select_from(Property).where(*visible_filters)

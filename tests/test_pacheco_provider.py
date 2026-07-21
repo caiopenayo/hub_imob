@@ -376,6 +376,43 @@ def test_detail_missing_optional_sections_uses_og_image_fallback():
     assert detail.main_image_url == "https://cdn.example.com/q2-10.jpg"
 
 
+def test_detail_gallery_accepts_lazy_image_attributes_and_srcset():
+    html = """
+    <html><head>
+      <link rel="canonical" href="https://pacheco.com.br/imoveis/q2-10/" />
+      <meta property="og:image" content="https://cdn.example.com/q2-10-og.jpg" />
+    </head><body class="postid-10">
+      <div class="wrapper-single">
+        <div class="hero-carousel">
+          <div class="owl-single-imovel">
+            <a data-src="https://cdn.example.com/q2-10-1.jpg"></a>
+            <img data-lazy="https://cdn.example.com/q2-10-2.webp" />
+            <img srcset="https://cdn.example.com/q2-10-small.jpg 320w, https://cdn.example.com/q2-10-large.jpg 1200w" />
+          </div>
+        </div>
+        <div class="content"><div class="wrapper-dados">
+          <div class="infos-imovel"><p>Studio - Q2-10 /</p><h1>R TESTE</h1><h2>CENTRO</h2></div>
+        </div></div>
+      </div>
+    </body></html>
+    """
+
+    detail = provider.parse_property_detail(
+        html,
+        PropertyCandidate(
+            source_key="pacheco",
+            external_id="Q2-10",
+            source_url="https://pacheco.com.br/imoveis/q2-10/",
+        ),
+    )
+
+    assert detail.image_urls == [
+        "https://cdn.example.com/q2-10-1.jpg",
+        "https://cdn.example.com/q2-10-2.webp",
+        "https://cdn.example.com/q2-10-large.jpg",
+    ]
+
+
 def test_engine_dry_run_follows_next_url_and_fetches_detail():
     async def run():
         def handler(request):

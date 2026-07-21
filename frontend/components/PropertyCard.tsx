@@ -61,6 +61,15 @@ function getValidImageSrc(src?: string): string | null {
   return null
 }
 
+function isGeneratedZimmermannThumbnail(src: string): boolean {
+  try {
+    const url = new URL(src, 'https://www.zimoveis.com.br')
+    return url.hostname.endsWith('zimoveis.com.br') && url.pathname.startsWith('/thumb/')
+  } catch {
+    return src.includes('zimoveis.com.br/thumb/') || src.startsWith('/thumb/')
+  }
+}
+
 function getImageGallery(property: Property): string[] {
   const metadataImages = Array.isArray(property.metadata?.images)
     ? property.metadata.images.filter((src): src is string => typeof src === 'string')
@@ -71,6 +80,8 @@ function getImageGallery(property: Property): string[] {
     .filter((src): src is string => Boolean(src))
 
   const uniqueImages = Array.from(new Set(images))
+  const preferredImages = uniqueImages.filter((src) => !isGeneratedZimmermannThumbnail(src))
+  if (preferredImages.length) return preferredImages
   return uniqueImages.length ? uniqueImages : ['/images/property-fallback.png']
 }
 

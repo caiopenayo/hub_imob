@@ -583,8 +583,15 @@ class ZimoveisProvider(RealEstateProvider):
         return self._external_id_from_url(canonical_url)
 
     def _detail_images(self, soup: BeautifulSoup) -> list[str]:
-        urls = [link.get("href") for link in soup.select('a[data-fancybox="galeria"][href]')]
-        return dedupe_urls(urls, self.base_url)
+        urls = dedupe_urls([link.get("href") for link in soup.select('a[data-fancybox="galeria"][href]')], self.base_url)
+        preferred_urls = [url for url in urls if not self._is_generated_thumbnail_url(url)]
+        return preferred_urls or urls
+
+    def _is_generated_thumbnail_url(self, value: str | None) -> bool:
+        if not value:
+            return False
+        parts = urlsplit(value)
+        return parts.netloc.endswith("zimoveis.com.br") and parts.path.startswith("/thumb/")
 
     def _video_urls(self, soup: BeautifulSoup) -> list[str]:
         urls = []
