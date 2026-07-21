@@ -169,5 +169,13 @@ def candidate_hash_payload(candidate: Any) -> dict[str, Any]:
         "parking_spaces": candidate.parking_spaces,
         "area_m2": candidate.area_m2,
         "main_image_url": candidate.main_image_url,
+        "offers": [
+            {
+                "purpose": offer.purpose,
+                "price": offer.price,
+                "currency": offer.currency,
+            }
+            for offer in sorted(getattr(candidate, "offers", []) or [], key=lambda item: item.purpose)
+        ],
         "tags": sorted(candidate.tags),
     }

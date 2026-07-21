@@ -1,5 +1,6 @@
 '''Define os formatos de entrada e saída de dados para a API relacionados a imóveis (Property)'''
 from typing import Optional
+from datetime import datetime
 from uuid import UUID
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field
 
@@ -36,6 +37,25 @@ class PropertyBase(BaseModel):
     )
 
 
+class PropertyOfferRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+    id: UUID
+    purpose: str
+    price: Optional[float] = None
+    currency: Optional[str] = "BRL"
+    status: str
+    content_hash: Optional[str] = None
+    first_seen_at: Optional[datetime] = None
+    last_seen_at: Optional[datetime] = None
+    missing_since: Optional[datetime] = None
+    removed_at: Optional[datetime] = None
+    metadata: Optional[dict] = Field(
+        default=None,
+        validation_alias=AliasChoices("metadata_json", "metadata"),
+    )
+
+
 class PropertyCreate(PropertyBase):
     external_id: str
     source_id: UUID
@@ -52,8 +72,14 @@ class PropertyRead(PropertyBase):
     url: str
     source_url: Optional[str] = None
     content_hash: Optional[str] = None
+    offers: list[PropertyOfferRead] = Field(default_factory=list)
 
 
 class PropertyList(BaseModel):
     items: list[PropertyRead]
     meta: dict
+
+
+class PriceHistoryItem(BaseModel):
+    price: float
+    detected_at: datetime

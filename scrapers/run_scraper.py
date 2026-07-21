@@ -18,8 +18,9 @@ def load_source_module(source: str):
 
 
 def load_provider(source: str):
-    mod = load_source_module(source)
-    return getattr(mod, "provider", None)
+    from scrapers.core.registry import load_provider as load_registered_provider
+
+    return load_registered_provider(source)
 
 
 async def run_scrapers(source: Optional[str] = None, mode: str = "delta") -> List[Dict[str, Any]]:
@@ -53,6 +54,7 @@ async def run_provider_sync(
     dry_run: bool | None = None,
     limit: int | None = None,
     max_pages: int | None = None,
+    max_details: int | None = None,
     search_scope: dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
     """Run a source that implements the shared provider interface."""
@@ -72,6 +74,7 @@ async def run_provider_sync(
             dry_run=True,
             limit=limit,
             max_pages=max_pages,
+            max_details=max_details,
         )
         return stats.as_summary()
 
@@ -84,6 +87,7 @@ async def run_provider_sync(
             dry_run=False,
             limit=limit,
             max_pages=max_pages,
+            max_details=max_details,
         )
         return stats.as_summary()
 
@@ -127,8 +131,39 @@ async def _run_once(
     dry_run: bool,
     limit: int | None,
     max_pages: int | None,
+    max_details: int | None,
     search_scope: dict[str, Any] | None,
+    job_type: str | None = None,
+    sale_scope: str | None = None,
 ) -> Dict[str, Any]:
+    if job_type:
+        from scrapers.core.scheduler import run_manual_job
+
+        provider_key = source
+        if not provider_key:
+            raise RuntimeError("--provider/--source is required when --job-type is used")
+        normalized_job_type = {
+            "health-check": "sale_health_check",
+            "priority-crawl": "sale_priority_crawl",
+            "full-crawl": "sale_full_crawl",
+            "sale_health_check": "sale_health_check",
+            "sale_priority_crawl": "sale_priority_crawl",
+            "sale_full_crawl": "sale_full_crawl",
+        }.get(job_type)
+        if normalized_job_type is None:
+            raise RuntimeError(f"unsupported job type: {job_type}")
+        if sale_scope == "priority-neighborhoods":
+            normalized_job_type = "sale_priority_crawl"
+        elif sale_scope == "full-city" and normalized_job_type != "sale_health_check":
+            normalized_job_type = "sale_full_crawl"
+        return await run_manual_job(
+            provider_key=provider_key,
+            job_type=normalized_job_type,
+            dry_run=dry_run,
+            max_pages=max_pages,
+            max_details=max_details,
+        )
+
     if source:
         try:
             if load_provider(source) is not None:
@@ -138,6 +173,7 @@ async def _run_once(
                     dry_run=dry_run,
                     limit=limit,
                     max_pages=max_pages,
+                    max_details=max_details,
                     search_scope=search_scope,
                 )
         except ModuleNotFoundError:
@@ -159,15 +195,36 @@ def main():
 
     parser = argparse.ArgumentParser(description="Run scrapers")
     parser.add_argument("--source", help="Optional source module to run")
+    parser.add_argument("--provider", help="Alias for --source when running provider-backed scrapers")
     parser.add_argument("--mode", choices=["full", "delta"], default="delta")
     parser.add_argument("--dry-run", action="store_true", help="Fetch and parse without persisting changes")
     parser.add_argument("--limit", type=int, default=None, help="Optional cap on discovered properties")
     parser.add_argument("--max-pages", type=int, default=None, help="Optional cap on listing pages")
+    parser.add_argument("--max-details", type=int, default=None, help="Optional cap on detail pages")
     parser.add_argument("--search-q", help="Optional search query for providers that support q")
+    parser.add_argument("--state", dest="state_slug", help="Optional state slug for providers that support it")
+    parser.add_argument("--city", dest="city_slug", help="Optional city slug for providers that support it")
+    parser.add_argument("--purpose", choices=["sale", "rent", "venda", "locacao"], help="Optional purpose/scope")
+    parser.add_argument(
+        "--job-type",
+        choices=["health-check", "priority-crawl", "full-crawl", "sale_health_check", "sale_priority_crawl", "sale_full_crawl"],
+        help="Run one operational scheduler job through the shared framework",
+    )
+    parser.add_argument("--scope", choices=["full-city", "priority-neighborhoods"], help="Operational sale scope")
+    parser.add_argument("--output-json", help="Optional local path to save the structured summary")
     parser.add_argument("--ingest", action="store_true", help="POST results to backend /properties")
     parser.add_argument("--interval", type=int, default=0, help="If set, run in loop every N minutes")
     args = parser.parse_args()
-    search_scope = {"q": args.search_q} if args.search_q else None
+    search_scope = {}
+    if args.search_q:
+        search_scope["q"] = args.search_q
+    if args.state_slug:
+        search_scope["state_slug"] = args.state_slug
+    if args.city_slug:
+        search_scope["city_slug"] = args.city_slug
+    if args.purpose:
+        search_scope["purpose"] = args.purpose
+    search_scope = search_scope or None
 
     async def _loop():
         if args.interval and args.interval > 0:
@@ -176,15 +233,21 @@ def main():
                 start = time.time()
                 try:
                     summary = await _run_once(
-                        args.source,
+                        args.source or args.provider,
                         args.mode,
                         args.ingest,
                         args.dry_run,
                         args.limit,
                         args.max_pages,
+                        args.max_details,
                         search_scope,
+                        args.job_type,
+                        args.scope,
                     )
-                    print("run summary:", json.dumps(summary, ensure_ascii=False, default=str))
+                    summary_json = json.dumps(summary, ensure_ascii=False, default=str)
+                    if args.output_json:
+                        Path(args.output_json).write_text(summary_json + "\n", encoding="utf-8")
+                    print("run summary:", summary_json)
                 except Exception as exc:
                     print("run exception:", exc)
                 elapsed = time.time() - start
@@ -192,15 +255,21 @@ def main():
                 await asyncio.sleep(wait)
         else:
             summary = await _run_once(
-                args.source,
+                args.source or args.provider,
                 args.mode,
                 args.ingest,
                 args.dry_run,
                 args.limit,
                 args.max_pages,
+                args.max_details,
                 search_scope,
+                args.job_type,
+                args.scope,
             )
-            print(json.dumps(summary, ensure_ascii=False, indent=2, default=str))
+            summary_json = json.dumps(summary, ensure_ascii=False, indent=2, default=str)
+            if args.output_json:
+                Path(args.output_json).write_text(summary_json + "\n", encoding="utf-8")
+            print(summary_json)
 
     asyncio.run(_loop())
 

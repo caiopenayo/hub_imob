@@ -5,7 +5,7 @@ from typing import Any
 
 from sqlalchemy import Boolean, String, Text, Integer, Numeric, DateTime, JSON, ForeignKey, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
 
@@ -70,6 +70,39 @@ class Property(Base):
     detail_last_fetched_at: Mapped[datetime | None] = mapped_column(DateTime)
     created_at: Mapped[datetime | None] = mapped_column(DateTime, default=utc_now)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime, default=utc_now, onupdate=utc_now)
+    offers: Mapped[list["PropertyOffer"]] = relationship(
+        "PropertyOffer",
+        back_populates="property",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+
+
+class PropertyOffer(Base):
+    __tablename__ = "property_offers"
+    __table_args__ = (
+        UniqueConstraint("property_id", "purpose", name="uq_property_offers_property_purpose"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    property_id: Mapped[uuid.UUID] = mapped_column(
+        PG_UUID(as_uuid=True),
+        ForeignKey("properties.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    purpose: Mapped[str] = mapped_column(String(20), nullable=False)
+    price: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
+    currency: Mapped[str | None] = mapped_column(String(3), default="BRL")
+    status: Mapped[str] = mapped_column(String(20), default="ACTIVE")
+    content_hash: Mapped[str | None] = mapped_column(String(64))
+    first_seen_at: Mapped[datetime | None] = mapped_column(DateTime, default=utc_now)
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime, default=utc_now)
+    missing_since: Mapped[datetime | None] = mapped_column(DateTime)
+    removed_at: Mapped[datetime | None] = mapped_column(DateTime)
+    metadata_json: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, onupdate=utc_now)
+    property: Mapped["Property"] = relationship("Property", back_populates="offers")
 
 
 class PropertyPhoto(Base):
@@ -87,6 +120,8 @@ class PropertyPhoto(Base):
     source_url: Mapped[str] = mapped_column(Text, nullable=False)
     position: Mapped[int | None] = mapped_column(Integer)
     content_hash: Mapped[str | None] = mapped_column(String(64))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    removed_at: Mapped[datetime | None] = mapped_column(DateTime)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=utc_now, onupdate=utc_now)
 

@@ -1,0 +1,23 @@
+[
+  {
+    "kind": "response",
+    "url": "https://www.maispadraoimoveis.com.br/imoveis/a-venda/sao-paulo",
+    "status": 403,
+    "resource_type": "document",
+    "content_type": "text/html; charset=utf-8"
+  },
+  {
+    "kind": "response",
+    "url": "https://www.google.com/recaptcha/api2/anchor?ar=1&k=6Ld_NA8UAAAAAH-Qk4AKG724fxByb9DyR9NiGQSq&co=aHR0cHM6Ly93d3cubWFpc3BhZHJhb2ltb3ZlaXMuY29tLmJyOjQ0Mw..&hl=en&v=rL1ELiQAg1kPezz6_H9hTZ_i&size=normal&anchor-ms=20000&execute-ms=30000&cb=l9dbloqn7351",
+    "status": 200,
+    "resource_type": "document",
+    "content_type": "text/html; charset=utf-8"
+  },
+  {
+    "kind": "response",
+    "url": "https://www.google.com/recaptcha/api2/bframe?hl=en&v=rL1ELiQAg1kPezz6_H9hTZ_i&k=6Ld_NA8UAAAAAH-Qk4AKG724fxByb9DyR9NiGQSq&bft=0dAFcWeA79epZUi2x39-i7oVrRnxK7uHLmw6iKcF8Nuj8wXJafrIWbuk3tYEo4A-LFYH4Lehz_PXd7BlzBXo-_59R1uOkkViUUMA",
+    "status": 200,
+    "resource_type": "document",
+    "content_type": "text/html; charset=utf-8"
+  }
+]

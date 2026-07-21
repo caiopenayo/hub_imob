@@ -1,0 +1,74 @@
+[
+    {
+        "cidade": [
+            {
+                "term_id": 72,
+                "slug": "sao-paulo",
+                "name": "SAO PAULO"
+            }
+        ]
+    },
+    {
+        "cidade": [
+            {
+                "term_id": 558,
+                "slug": "sao-bernardo-do-camp",
+                "name": "SAO BERNARDO DO CAMP"
+            }
+        ]
+    },
+    {
+        "cidade": [
+            {
+                "term_id": 71,
+                "slug": "barueri",
+                "name": "BARUERI"
+            }
+        ]
+    },
+    {
+        "cidade": [
+            {
+                "term_id": 588,
+                "slug": "cotia",
+                "name": "COTIA"
+            }
+        ]
+    },
+    {
+        "cidade": [
+            {
+                "term_id": 147,
+                "slug": "jundiai",
+                "name": "JUNDIAI"
+            }
+        ]
+    },
+    {
+        "cidade": [
+            {
+                "term_id": 144,
+                "slug": "praia-grande",
+                "name": "PRAIA GRANDE"
+            }
+        ]
+    },
+    {
+        "cidade": [
+            {
+                "term_id": 145,
+                "slug": "sao-sebastiao",
+                "name": "SAO SEBASTIAO"
+            }
+        ]
+    },
+    {
+        "cidade": [
+            {
+                "term_id": 151,
+                "slug": "santos",
+                "name": "SANTOS"
+            }
+        ]
+    }
+]

@@ -14,10 +14,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ...db.session import get_session
 
 # Schemas Pydantic usados para validar entrada e formatar saída
-from ...schemas.property import PropertyCreate, PropertyRead, PropertyList
+from ...schemas.property import PriceHistoryItem, PropertyCreate, PropertyRead, PropertyList
 
 # Funções CRUD que acessam o banco
-from ...db.crud import create_or_update_property, get_property_by_id, list_properties as list_properties_crud
+from ...db.crud import (
+    create_or_update_property,
+    get_property_by_id,
+    get_property_price_history,
+    list_properties as list_properties_crud,
+)
 
 from ...core.security import require_api_key
 
@@ -72,6 +77,19 @@ async def list_properties(
     )
     # Retorna os imóveis e metadados da paginação
     return {"items": [PropertyRead.model_validate(i) for i in items], "meta": {"page": page, "per_page": per_page, "total": total}}
+
+
+@router.get("/{property_id}/price-history", response_model=list[PriceHistoryItem])
+async def get_property_price_history_endpoint(property_id: str, session: AsyncSession = Depends(get_session)):
+    property_obj = await get_property_by_id(session, property_id)
+    if not property_obj:
+        raise HTTPException(status_code=404, detail="Property not found")
+    history = await get_property_price_history(session, property_obj.id)
+    return [
+        {"price": float(item["price"]), "detected_at": item["detected_at"]}
+        for item in history
+    ]
+
 
 # Rota GET /properties/{property_id}
 # Busca um imóvel específico pelo ID

@@ -56,6 +56,8 @@ As principais pastas são:
 | `infra`    | Arquivos relacionados à infraestrutura    |
 | `alembic`  | Histórico de alterações do banco de dados |
 
+Documentação do motor de scraping e providers: [docs/scraping-framework.md](docs/scraping-framework.md).
+
 ---
 
 # 3. Programas necessários

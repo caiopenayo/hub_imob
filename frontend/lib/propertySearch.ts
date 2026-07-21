@@ -4,11 +4,13 @@ export type Property = {
   description?: string
   price?: number
   price_currency?: string
+  property_subtype?: string
   city?: string
   neighborhood?: string
   bedrooms?: number
   bathrooms?: number
   area_m2?: number
+  main_image_url?: string
   updated_at?: string
   last_seen_at?: string
   url: string

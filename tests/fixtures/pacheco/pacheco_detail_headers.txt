@@ -1,0 +1,15 @@
+HTTP/2 200 
+server: nginx
+date: Thu, 16 Jul 2026 16:37:32 GMT
+content-type: text/html; charset=UTF-8
+vary: Accept-Encoding
+x-powered-by: PHP/8.1.34
+expires: Thu, 19 Nov 1981 08:52:00 GMT
+x-pingback: https://pacheco.com.br/xmlrpc.php
+link: <https://pacheco.com.br/wp-json/>; rel="https://api.w.org/", <https://pacheco.com.br/wp-json/wp/v2/imoveis/81572>; rel="alternate"; title="JSON"; type="application/json", <https://pacheco.com.br/?p=81572>; rel=shortlink
+cache-control: no-cache
+pragma: no-cache
+set-cookie: PHPSESSID=il6fk6p07lfke9h254j7lf4v81; path=/; secure; HttpOnly
+vary: Accept-Encoding
+x-powered-by: PleskLin
+

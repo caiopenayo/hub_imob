@@ -20,14 +20,14 @@ services:
     plan: free
     repo: .
     branch: main
-    # run every 30 minutes by default; override on Render dashboard if desired
-    schedule: "*/30 * * * *"
-    buildCommand: pip install -r scrapers/requirements.txt
-    startCommand: python -m scrapers.run_scraper --ingest
+    # run the due operational schedules; offsets, jitter and locking live in code/settings
+    schedule: "*/10 * * * *"
+    buildCommand: pip install -r backend/requirements.txt && pip install -r scrapers/requirements.txt
+    startCommand: python -m scrapers.scheduler --run-due-once
     envVars:
-      - key: BACKEND_URL
+      - key: DATABASE_URL
         from: env
-      - key: BACKEND_API_KEY
+      - key: SECRET_KEY
         from: env
 
 # Note: fill in env vars and secrets via the Render dashboard. This manifest is a template

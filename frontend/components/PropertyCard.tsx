@@ -45,6 +45,13 @@ function formatLocation(city?: string, neighborhood?: string): string {
 
 function getSourceLabel(source?: string): string {
   if (!source) return 'Fonte externa'
+  const sourceLabels: Record<string, string> = {
+    localimoveis: 'Local Imóveis',
+    pacheco: 'Pacheco Imóveis',
+    zimoveis: 'Zimmermann Imóveis',
+    zimmermann: 'Zimmermann Imóveis',
+  }
+  if (sourceLabels[source]) return sourceLabels[source]
   return source.charAt(0).toUpperCase() + source.slice(1)
 }
 
@@ -58,7 +65,7 @@ function getImageGallery(property: Property): string[] {
   const metadataImages = Array.isArray(property.metadata?.images)
     ? property.metadata.images.filter((src): src is string => typeof src === 'string')
     : []
-  const rawImages = [property.metadata?.main_image, ...metadataImages]
+  const rawImages = [property.main_image_url, property.metadata?.main_image, ...metadataImages]
   const images = rawImages
     .map((src) => getValidImageSrc(src))
     .filter((src): src is string => Boolean(src))
@@ -156,6 +163,7 @@ export function PropertyCard({ property, priority = false }: PropertyCardProps) 
           blurDataURL={imageBlurDataUrl}
           className="property-image"
           fill
+          key={imageSrc}
           placeholder="blur"
           priority={priority}
           sizes="(max-width: 820px) 100vw, (max-width: 1040px) 50vw, 33vw"

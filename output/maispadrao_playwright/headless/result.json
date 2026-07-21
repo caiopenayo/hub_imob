@@ -1,0 +1,49 @@
+{
+  "mode": "headless",
+  "result": "CAPTCHA_REQUIRED",
+  "main_navigation": {
+    "status": 403,
+    "final_url": "https://www.maispadraoimoveis.com.br/imoveis/a-venda/sao-paulo",
+    "title": "Verificação de segurança",
+    "text_sample": "Verificação de segurança\nComplete o desafio abaixo para acessar maispadraoimoveis.com.br\n\n\n\n\n\n\n\n\n\nID da requisição: 58bf91527da2ac60da2684a044e62d6b - Seu endereço IP: 130.25.254.77\n\nHorário: 2026-07-16 11:59:10 - Local: 000",
+    "cards_count": 0,
+    "has_marko_vars": false,
+    "marko_vars_keys_count": 0,
+    "listing_keys": [],
+    "listing_keys_count": 0
+  },
+  "security": {
+    "challenge_detected": true,
+    "captcha_detected": true,
+    "matched_terms": [
+      "Verificação de segurança",
+      "captcha",
+      "recaptcha",
+      "challenge",
+      "gocache-error-page"
+    ],
+    "blocking_terms": [
+      "Verificação de segurança",
+      "Complete o desafio",
+      "challenge",
+      "gocache-error-page"
+    ],
+    "captcha_terms": [
+      "captcha",
+      "recaptcha",
+      "g-recaptcha",
+      "data-sitekey"
+    ]
+  },
+  "pagination_api": {
+    "attempted": false
+  },
+  "cookies": [
+    {
+      "name": "__goc_session__",
+      "domain": "www.maispadraoimoveis.com.br"
+    }
+  ],
+  "duration_seconds": 6.843,
+  "error": null
+}

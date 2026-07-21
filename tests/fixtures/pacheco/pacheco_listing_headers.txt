@@ -1,0 +1,14 @@
+HTTP/2 200 
+server: nginx
+date: Thu, 16 Jul 2026 16:35:08 GMT
+content-type: text/html; charset=UTF-8
+vary: Accept-Encoding
+x-powered-by: PHP/8.1.34
+expires: Thu, 19 Nov 1981 08:52:00 GMT
+link: <https://pacheco.com.br/wp-json/>; rel="https://api.w.org/", <https://pacheco.com.br/wp-json/wp/v2/pages/20>; rel="alternate"; title="JSON"; type="application/json", <https://pacheco.com.br/?p=20>; rel=shortlink
+cache-control: no-cache
+pragma: no-cache
+set-cookie: PHPSESSID=4qm6uo82h1pj0rprq2kc8bl02l; path=/; secure; HttpOnly
+vary: Accept-Encoding
+x-powered-by: PleskLin
+

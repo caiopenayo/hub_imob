@@ -3,13 +3,16 @@ from datetime import datetime
 
 # select monta consultas SQL
 # func permite usar funções SQL, como count()
+import uuid
+
 from sqlalchemy import select, func
+from sqlalchemy.orm import selectinload
 
 # Tipo da sessão assíncrona com o banco
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Importa os modelos/tabelas do banco
-from ..db.models import JobLog, Property
+from ..db.models import JobLog, Property, PropertyEvent, Source
 
 # Schema usado para validar dados de criação de imóvel
 from ..schemas.property import PropertyCreate
@@ -18,7 +21,11 @@ from ..schemas.property import PropertyCreate
 # Busca um imóvel usando a combinação source_id + external_id
 async def get_property_by_source_external(session: AsyncSession, source_id, external_id):
     # Monta uma query SELECT na tabela Property com dois filtros    
-    stmt = select(Property).where(Property.source_id == source_id, Property.external_id == external_id)
+    stmt = (
+        select(Property)
+        .options(selectinload(Property.offers))
+        .where(Property.source_id == source_id, Property.external_id == external_id)
+    )
     # Executa a query no banco    
     result = await session.execute(stmt)
 
@@ -27,9 +34,30 @@ async def get_property_by_source_external(session: AsyncSession, source_id, exte
 
 # Busca um imóvel pelo ID interno do banco
 async def get_property_by_id(session: AsyncSession, property_id):
-    stmt = select(Property).where(Property.id == property_id)
+    stmt = select(Property).options(selectinload(Property.offers)).where(Property.id == property_id)
     result = await session.execute(stmt)
     return result.scalars().first()
+
+
+async def get_source_by_id_or_key(session: AsyncSession, source_id_or_key: str):
+    parsed_uuid = None
+    try:
+        parsed_uuid = uuid.UUID(str(source_id_or_key))
+    except (TypeError, ValueError):
+        parsed_uuid = None
+
+    if parsed_uuid:
+        stmt = select(Source).where(Source.id == parsed_uuid)
+    else:
+        stmt = select(Source).where(Source.key == source_id_or_key)
+    result = await session.execute(stmt)
+    return result.scalars().first()
+
+
+async def list_enabled_sources(session: AsyncSession):
+    stmt = select(Source).where(Source.enabled.is_(True))
+    result = await session.execute(stmt)
+    return result.scalars().all()
 
 # Lista imóveis com filtros opcionais e paginação
 async def list_properties(
@@ -43,10 +71,14 @@ async def list_properties(
     offset: int = 0,
 ):
     # Query principal para buscar os imóveis
-    stmt = select(Property).where(Property.status == "ACTIVE")
+    visible_filters = [
+        Property.status == "ACTIVE",
+        Property.property_subtype.is_distinct_from("Comercial"),
+    ]
+    stmt = select(Property).options(selectinload(Property.offers)).where(*visible_filters)
 
     # Query separada para contar o total de imóveis com os mesmos filtros
-    count_stmt = select(func.count()).select_from(Property).where(Property.status == "ACTIVE")
+    count_stmt = select(func.count()).select_from(Property).where(*visible_filters)
 
     # Se cidade foi informada, filtra por cidade ignorando maiúsculas/minúsculas
     if city:
@@ -94,6 +126,7 @@ async def create_job_log(
     source_id=None,
     provider_key: str | None = None,
     search_scope: dict | None = None,
+    status: str = "running",
 ):
     # Cria um objeto JobLog ainda não salvo no banco
     job = JobLog(
@@ -103,8 +136,8 @@ async def create_job_log(
         source_ids=source_ids,
         search_scope=search_scope,
         mode=mode,
-        status='running',
-        started_at=datetime.utcnow(),
+        status=status,
+        started_at=datetime.utcnow() if status == "running" else None,
     )
     # Adiciona o objeto na sessão
     session.add(job)
@@ -114,6 +147,25 @@ async def create_job_log(
     #Atualiza o objeto Python com os dados gerados pelo banco, como ID
     await session.refresh(job)
     return job
+
+
+async def has_running_full_job(
+    session: AsyncSession,
+    source_id,
+    provider_key: str,
+    search_scope: dict | None,
+):
+    stmt = select(JobLog).where(
+        JobLog.source_id == source_id,
+        JobLog.provider_key == provider_key,
+        JobLog.mode == "full",
+        JobLog.status.in_(["pending", "running"]),
+    )
+    result = await session.execute(stmt)
+    for job in result.scalars().all():
+        if (job.search_scope or {}) == (search_scope or {}):
+            return job
+    return None
 
 # Atualiza o status de um job existente
 async def update_job_log(
@@ -166,6 +218,26 @@ async def get_job_log_by_id(session: AsyncSession, job_id):
     stmt = select(JobLog).where(JobLog.id == job_id)
     result = await session.execute(stmt)
     return result.scalars().first()
+
+
+async def get_property_price_history(session: AsyncSession, property_id):
+    stmt = (
+        select(PropertyEvent)
+        .where(
+            PropertyEvent.property_id == property_id,
+            PropertyEvent.event_type.in_(["CREATED", "PRICE_CHANGED"]),
+        )
+        .order_by(PropertyEvent.detected_at.asc())
+    )
+    result = await session.execute(stmt)
+    history = []
+    for event in result.scalars().all():
+        payload = event.new_value or {}
+        price = payload.get("price")
+        if price is None:
+            continue
+        history.append({"price": price, "detected_at": event.detected_at})
+    return history
 
 # Cria um imóvel novo ou atualiza um imóvel existente
 async def create_or_update_property(session: AsyncSession, payload: PropertyCreate):
