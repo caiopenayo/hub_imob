@@ -12,6 +12,7 @@ import {
   Images,
   MapPin,
   Maximize2,
+  Sparkles,
   Share2,
 } from 'lucide-react'
 
@@ -61,6 +62,19 @@ function getValidImageSrc(src?: string): string | null {
   return null
 }
 
+function formatPreferenceLabel(preference: string): string {
+  const labels: Record<string, string> = {
+    price: 'preço',
+    area_m2: 'área aproximada',
+    neighborhood: 'bairro',
+    bedrooms: 'quartos',
+    bathrooms: 'banheiros',
+    parking_spaces: 'vagas',
+    balcony: 'varanda',
+  }
+  return labels[preference] ?? preference.replace(/_/g, ' ')
+}
+
 function isGeneratedZimmermannThumbnail(src: string): boolean {
   try {
     const url = new URL(src, 'https://www.zimoveis.com.br')
@@ -94,6 +108,12 @@ export function PropertyCard({ property, priority = false }: PropertyCardProps) 
   const hasGallery = galleryImages.length > 1
   const isRemoteImage = imageSrc.startsWith('http://') || imageSrc.startsWith('https://')
   const sourceLabel = getSourceLabel(property.metadata?.source)
+  const matchPercent = typeof property.match_score === 'number'
+    ? Math.round(property.match_score * 100)
+    : null
+  const matchedPreferences = property.matched_preferences ?? []
+  const missingPreferences = property.missing_preferences ?? []
+  const unknownPreferences = property.unknown_preferences ?? []
 
   useEffect(() => {
     setCurrentImageIndex(0)
@@ -192,6 +212,12 @@ export function PropertyCard({ property, priority = false }: PropertyCardProps) 
           <Building2 aria-hidden="true" size={13} />
           Fonte original: {sourceLabel}
         </span>
+        {matchPercent !== null ? (
+          <span className="match-badge">
+            <Sparkles aria-hidden="true" size={13} />
+            {matchPercent}% compatível
+          </span>
+        ) : null}
 
         {hasGallery ? (
           <>
@@ -257,6 +283,20 @@ export function PropertyCard({ property, priority = false }: PropertyCardProps) 
           <span><BedDouble aria-hidden="true" size={17} />{property.bedrooms ?? '-'} quartos</span>
           <span><Bath aria-hidden="true" size={17} />{property.bathrooms ?? '-'} banheiros</span>
         </div>
+
+        {matchPercent !== null ? (
+          <section className="match-summary" aria-label="Resumo de compatibilidade">
+            {matchedPreferences.length ? (
+              <p><strong>Combina com:</strong> {matchedPreferences.map(formatPreferenceLabel).join(', ')}</p>
+            ) : null}
+            {missingPreferences.length ? (
+              <p><strong>Fora da preferência:</strong> {missingPreferences.map(formatPreferenceLabel).join(', ')}</p>
+            ) : null}
+            {unknownPreferences.length ? (
+              <p><strong>Não confirmado:</strong> {unknownPreferences.map(formatPreferenceLabel).join(', ')}</p>
+            ) : null}
+          </section>
+        ) : null}
 
         <p className="property-source">
           <CheckCircle2 aria-hidden="true" size={16} />

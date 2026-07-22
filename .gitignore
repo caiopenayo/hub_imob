@@ -10,3 +10,14 @@ yarn-error.log*
 !.env.example
 __pycache__/
 *.py[cod]
+
+# Local Hugging Face/model artifacts
+.cache/
+hf_cache/
+huggingface/
+models/
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.onnx

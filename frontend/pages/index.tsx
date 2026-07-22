@@ -16,11 +16,11 @@ import type { LucideIcon } from 'lucide-react'
 import { AppShell } from '../components/AppShell'
 import { SiteFooter } from '../components/SiteFooter'
 import {
-  bedroomOptions,
   emptyFilters,
-  maxPriceOptions,
   propertySearchHref,
 } from '../lib/propertySearch'
+
+const MAX_QUERY_LENGTH = 500
 
 const benefits = [
   {
@@ -73,19 +73,21 @@ const heroTrustItems = [
 
 export default function Home() {
   const router = useRouter()
-  const [city, setCity] = useState('')
-  const [maxPrice, setMaxPrice] = useState('')
-  const [bedrooms, setBedrooms] = useState('')
+  const [query, setQuery] = useState('')
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    void router.push(propertySearchHref({ city, maxPrice, bedrooms }))
+    const trimmedQuery = query.trim()
+    if (!trimmedQuery) {
+      void router.push(propertySearchHref(emptyFilters))
+      return
+    }
+    const params = new URLSearchParams({ q: trimmedQuery })
+    void router.push(`/imoveis?${params.toString()}`)
   }
 
   function clearFilters() {
-    setCity('')
-    setMaxPrice('')
-    setBedrooms('')
+    setQuery('')
   }
 
   function openResultsPage() {
@@ -111,53 +113,31 @@ export default function Home() {
 
               <section className="search-card" aria-label="Buscar imóveis">
                 <form onSubmit={handleSubmit} className="search-form">
-                  <label className="field field-city">
-                    <span>Cidade</span>
-                    <input
-                      name="city"
-                      value={city}
-                      onChange={(event) => setCity(event.target.value)}
-                      placeholder="São Paulo"
+                  <label className="field field-city hero-natural-field">
+                    <span>Descreva sua busca</span>
+                    <textarea
+                      maxLength={MAX_QUERY_LENGTH}
+                      name="query"
+                      value={query}
+                      onChange={(event) => setQuery(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' && !event.shiftKey) {
+                          event.preventDefault()
+                          event.currentTarget.form?.requestSubmit()
+                        }
+                      }}
+                      placeholder="Apartamento de 100 m² em Pinheiros por até R$ 1 milhão"
+                      rows={3}
                     />
                   </label>
 
-                  <label className="field">
-                    <span>Preço máximo</span>
-                    <select
-                      name="maxPrice"
-                      value={maxPrice}
-                      onChange={(event) => setMaxPrice(event.target.value)}
-                    >
-                      {maxPriceOptions.map((option) => (
-                        <option key={option.label} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className="field">
-                    <span>Quartos</span>
-                    <select
-                      name="bedrooms"
-                      value={bedrooms}
-                      onChange={(event) => setBedrooms(event.target.value)}
-                    >
-                      {bedroomOptions.map((option) => (
-                        <option key={option.label} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
                   <div className="search-actions">
-                    <button className="button button-primary button-search" type="submit">
+                    <button className="button button-primary button-search" type="submit" disabled={query.length > MAX_QUERY_LENGTH}>
                       <Search aria-hidden="true" size={20} />
-                      Buscar imóveis
+                      Buscar com descrição
                     </button>
                     <button className="button button-ghost" type="button" onClick={clearFilters}>
-                      Limpar filtros
+                      Limpar
                     </button>
                   </div>
                 </form>

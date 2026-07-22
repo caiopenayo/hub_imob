@@ -2,6 +2,8 @@ export type Property = {
   id: string
   title: string
   description?: string
+  transaction_type?: string
+  property_type?: string
   price?: number
   price_currency?: string
   property_subtype?: string
@@ -9,11 +11,17 @@ export type Property = {
   neighborhood?: string
   bedrooms?: number
   bathrooms?: number
+  parking_spaces?: number
+  balcony?: boolean | null
   area_m2?: number
   main_image_url?: string
   updated_at?: string
   last_seen_at?: string
   url: string
+  match_score?: number
+  matched_preferences?: string[]
+  missing_preferences?: string[]
+  unknown_preferences?: string[]
   metadata?: {
     main_image?: string
     images?: string[]
@@ -29,6 +37,66 @@ export type Meta = {
   page: number
   per_page: number
   total: number
+}
+
+export type RequirementLevel = 'required' | 'preferred'
+export type TransactionType = 'sale' | 'rent'
+export type PropertyType = 'apartment' | 'house' | 'studio' | 'commercial' | 'land'
+
+export type NumericCriterion = {
+  min_value?: number | null
+  max_value?: number | null
+  target_value?: number | null
+  importance: RequirementLevel
+}
+
+export type BooleanCriterion = {
+  value: boolean
+  importance: RequirementLevel
+}
+
+export type SearchIntent = {
+  transaction_type?: TransactionType | null
+  property_type?: PropertyType | null
+  city?: string | null
+  neighborhoods: string[]
+  price?: NumericCriterion | null
+  area_m2?: NumericCriterion | null
+  bedrooms?: NumericCriterion | null
+  bathrooms?: NumericCriterion | null
+  parking_spaces?: NumericCriterion | null
+  balcony?: BooleanCriterion | null
+  unresolved_terms: string[]
+  clarification_needed: boolean
+  clarification_question?: string | null
+}
+
+export type NormalizationIssue = {
+  field: string
+  original_value: string
+  reason: string
+}
+
+export type SearchModelInfo = {
+  provider: string
+  model_id: string
+}
+
+export type NaturalSearchResponse = {
+  query: string
+  intent: SearchIntent
+  normalized_intent: SearchIntent
+  normalization_issues: NormalizationIssue[]
+  items: Property[]
+  meta: Meta
+  model: SearchModelInfo
+}
+
+export type NaturalSearchRequest = {
+  query: string
+  page?: number
+  perPage?: number
+  signal?: AbortSignal
 }
 
 export type Filters = {
@@ -130,4 +198,43 @@ export function propertySearchHref(filters: SearchHrefFilters, page?: number): s
   const params = buildPropertySearchParams(filters, page)
   const queryString = params.toString()
   return queryString ? `/imoveis?${queryString}` : '/imoveis'
+}
+
+export async function fetchNaturalSearch({
+  query,
+  page = 1,
+  perPage = 21,
+  signal,
+}: NaturalSearchRequest): Promise<NaturalSearchResponse> {
+  const response = await fetch(`${API_URL}/search`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      query,
+      page,
+      per_page: perPage,
+    }),
+    signal,
+  })
+
+  if (!response.ok) {
+    const message = response.status === 503
+      ? 'A busca em linguagem natural está temporariamente indisponível.'
+      : 'Não conseguimos interpretar essa busca.'
+    throw new ApiError(message, response.status)
+  }
+
+  return response.json() as Promise<NaturalSearchResponse>
+}
+
+export class ApiError extends Error {
+  status: number
+
+  constructor(message: string, status: number) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+  }
 }

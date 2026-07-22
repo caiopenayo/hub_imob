@@ -58,6 +58,7 @@ class Property(Base):
     suites: Mapped[int | None] = mapped_column(Integer)
     bathrooms: Mapped[int | None] = mapped_column(Integer)
     parking_spaces: Mapped[int | None] = mapped_column(Integer)
+    balcony: Mapped[bool | None] = mapped_column(Boolean)
     area_m2: Mapped[Decimal | None] = mapped_column(Numeric(8, 2))
     main_image_url: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str | None] = mapped_column(String(20), default="ACTIVE")

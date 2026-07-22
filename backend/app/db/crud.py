@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 # Importa os modelos/tabelas do banco
 from ..db.models import JobLog, Property, PropertyEvent, Source
+from ..db.property_filters import visible_property_filters
 
 # Schema usado para validar dados de criação de imóvel
 from ..schemas.property import PropertyCreate
@@ -71,10 +72,7 @@ async def list_properties(
     offset: int = 0,
 ):
     # Query principal para buscar os imóveis
-    visible_filters = [
-        Property.status == "ACTIVE",
-        Property.property_subtype.is_distinct_from("Comercial"),
-    ]
+    visible_filters = visible_property_filters()
     stmt = select(Property).options(selectinload(Property.offers), selectinload(Property.photos)).where(*visible_filters)
 
     # Query separada para contar o total de imóveis com os mesmos filtros

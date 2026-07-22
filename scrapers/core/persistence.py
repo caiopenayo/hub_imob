@@ -323,6 +323,8 @@ class PropertyRepository:
             prop.bathrooms = detail.bathrooms
         if detail.parking_spaces is not None:
             prop.parking_spaces = detail.parking_spaces
+        if self._has_balcony_feature(detail.property_features):
+            prop.balcony = True
         if detail.area_m2 is not None:
             prop.area_m2 = detail.area_m2
         if detail.description:
@@ -785,6 +787,7 @@ class PropertyRepository:
                 "suites": prop.suites,
                 "bathrooms": prop.bathrooms,
                 "parking_spaces": prop.parking_spaces,
+                "balcony": prop.balcony,
                 "area_m2": prop.area_m2,
                 "main_image_url": prop.main_image_url,
                 "latitude": prop.latitude,
@@ -800,6 +803,11 @@ class PropertyRepository:
             for key in sorted(set(old) | set(new))
             if old.get(key) != new.get(key)
         }
+
+    @staticmethod
+    def _has_balcony_feature(features: list[str] | None) -> bool:
+        text = " ".join(features or []).casefold()
+        return any(token in text for token in ("varanda", "sacada", "terraço", "terraco"))
 
 
 def detail_is_stale(prop: Property | None, content_hash: str, ttl_hours: int, now: datetime | None = None) -> bool:

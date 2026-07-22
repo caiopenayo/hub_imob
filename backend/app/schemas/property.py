@@ -26,6 +26,7 @@ class PropertyBase(BaseModel):
     suites: Optional[int] = None
     bathrooms: Optional[int] = None
     parking_spaces: Optional[int] = None
+    balcony: Optional[bool] = None
     area_m2: Optional[float] = None
     main_image_url: Optional[str] = None
     latitude: Optional[float] = None

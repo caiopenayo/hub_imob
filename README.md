@@ -58,6 +58,10 @@ As principais pastas são:
 
 Documentação do motor de scraping e providers: [docs/scraping-framework.md](docs/scraping-framework.md).
 
+Documentação do backend e da interpretação de busca em linguagem natural: [backend/README.md](backend/README.md).
+
+Guia para rodar inferência da busca natural em GPU no Google Colab: [docs/colab-search-inference.md](docs/colab-search-inference.md).
+
 ---
 
 # 3. Programas necessários
